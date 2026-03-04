@@ -1,0 +1,324 @@
+# Baseline Mylar chart values.
+# Defaults are sanitized and generic: no real hostnames, no environment-specific PVC names.
+# Config generation is optional and disabled by default.
+
+mylar:
+  global:
+    fullnameOverride: mylar
+
+  defaultPodOptions:
+    securityContext:
+      fsGroup: 1000
+      fsGroupChangePolicy: Always
+
+  controllers:
+    main:
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+      containers:
+        main:
+          image:
+            repository: linuxserver/mylar3
+            tag: nightly
+            pullPolicy: IfNotPresent
+          env:
+            TZ: UTC
+            PUID: "1000"
+            PGID: "1000"
+            UMASK: "002"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      initContainers:
+        bootstrap-config:
+          image:
+            repository: alpine
+            tag: "3.21.3"
+            pullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              set -eu
+              config_generation_enabled="${MYLAR_CONFIG_GENERATION_ENABLED:-false}"
+              if [ "${config_generation_enabled}" != "true" ]; then
+                echo "mylar bootstrap: config generation disabled"
+                exit 0
+              fi
+
+              config_path="${MYLAR_CONFIG_PATH:-/config/config.ini}"
+              force_rewrite="${MYLAR_BOOTSTRAP_FORCE_REWRITE:-false}"
+              sync_on_divergence="${MYLAR_BOOTSTRAP_SYNC_ON_DIVERGENCE:-false}"
+              log_diff="${MYLAR_BOOTSTRAP_LOG_DIFF:-false}"
+              prowlarr_managed="${MYLAR_PROWLARR_MANAGED:-false}"
+              generated_path="/tmp/config.generated.ini"
+              managed_settings_path="/tmp/config.managed.settings"
+              live_settings_snapshot_path="/tmp/config.live.managed.snapshot"
+
+              add_managed_setting() {
+                section_name="$1"
+                option_name="$2"
+                option_value="$3"
+                if [ -n "${option_value}" ]; then
+                  printf '%s|%s|%s\n' "${section_name}" "${option_name}" "${option_value}" >> "${managed_settings_path}"
+                fi
+              }
+
+              get_ini_value() {
+                file_path="$1"
+                target_section="$2"
+                target_key="$3"
+                awk -v section="${target_section}" -v key="${target_key}" '
+                  BEGIN { in_section = 0 }
+                  /^\[[^]]+\]$/ {
+                    section_name = $0
+                    sub(/^\[/, "", section_name)
+                    sub(/\]$/, "", section_name)
+                    in_section = (section_name == section)
+                    next
+                  }
+                  in_section {
+                    split($0, pair, "=")
+                    line_key = pair[1]
+                    gsub(/^[[:space:]]+|[[:space:]]+$/, "", line_key)
+                    if (line_key == key) {
+                      line_value = $0
+                      sub(/^[^=]*=/, "", line_value)
+                      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line_value)
+                      print line_value
+                      exit
+                    }
+                  }
+                ' "${file_path}"
+              }
+
+              upsert_ini_value() {
+                file_path="$1"
+                target_section="$2"
+                target_key="$3"
+                target_value="$4"
+                temp_path="${file_path}.tmp"
+                awk -v section="${target_section}" -v key="${target_key}" -v value="${target_value}" '
+                  function print_key_value() { print key " = " value }
+                  BEGIN {
+                    in_section = 0
+                    section_found = 0
+                    key_written = 0
+                  }
+                  {
+                    if ($0 ~ /^\[[^]]+\]$/) {
+                      if (in_section && !key_written) {
+                        print_key_value()
+                        key_written = 1
+                      }
+                      section_name = $0
+                      sub(/^\[/, "", section_name)
+                      sub(/\]$/, "", section_name)
+                      in_section = (section_name == section)
+                      if (in_section) {
+                        section_found = 1
+                      }
+                      print
+                      next
+                    }
+                    if (in_section && $0 ~ "^[[:space:]]*" key "[[:space:]]*=") {
+                      if (!key_written) {
+                        print_key_value()
+                        key_written = 1
+                      }
+                      next
+                    }
+                    print
+                  }
+                  END {
+                    if (in_section && !key_written) {
+                      print_key_value()
+                      key_written = 1
+                    }
+                    if (!section_found) {
+                      if (NR > 0) {
+                        print ""
+                      }
+                      print "[" section "]"
+                      print_key_value()
+                    }
+                  }
+                ' "${file_path}" > "${temp_path}"
+                mv "${temp_path}" "${file_path}"
+              }
+
+              write_managed_template() {
+                output_path="$1"
+                current_section=""
+                : > "${output_path}"
+                while IFS='|' read -r section_name option_name option_value; do
+                  [ -z "${section_name}" ] && continue
+                  [ -z "${option_name}" ] && continue
+                  [ -z "${option_value}" ] && continue
+                  if [ "${section_name}" != "${current_section}" ]; then
+                    if [ -n "${current_section}" ]; then
+                      printf '\n' >> "${output_path}"
+                    fi
+                    printf '[%s]\n' "${section_name}" >> "${output_path}"
+                    current_section="${section_name}"
+                  fi
+                  printf '%s = %s\n' "${option_name}" "${option_value}" >> "${output_path}"
+                done < "${managed_settings_path}"
+              }
+
+              mkdir -p "$(dirname "${config_path}")" "$(dirname "${generated_path}")"
+              : > "${managed_settings_path}"
+
+              # Managed profile intentionally excludes indexer + downloader client endpoints.
+              add_managed_setting "General" "destination_dir" "${MYLAR_LIBRARY_PATH:-/comics}"
+              add_managed_setting "General" "download_dir" "${MYLAR_DOWNLOADS_ROOT:-/downloads}"
+              add_managed_setting "General" "enable_rss" "${MYLAR_ENABLE_RSS:-True}"
+              add_managed_setting "General" "create_folders" "${MYLAR_CREATE_FOLDERS:-True}"
+              add_managed_setting "General" "rename_files" "${MYLAR_RENAME_FILES:-True}"
+              add_managed_setting "General" "lowercase_filenames" "${MYLAR_LOWERCASE_FILENAMES:-True}"
+              add_managed_setting "General" "failed_download_handling" "${MYLAR_FAILED_DOWNLOAD_HANDLING:-True}"
+              add_managed_setting "General" "scan_on_series_changes" "${MYLAR_SCAN_ON_SERIES_CHANGES:-True}"
+              add_managed_setting "General" "annuals_on" "${MYLAR_ANNUALS_ON:-True}"
+              add_managed_setting "Import" "comic_dir" "${MYLAR_LIBRARY_PATH:-/comics}"
+              add_managed_setting "Import" "imp_metadata" "${MYLAR_IMPORT_METADATA:-True}"
+              add_managed_setting "Import" "imp_move" "${MYLAR_IMPORT_MOVE:-True}"
+              add_managed_setting "Import" "imp_rename" "${MYLAR_IMPORT_RENAME:-True}"
+              add_managed_setting "Scheduler" "download_scan_interval" "${MYLAR_DOWNLOAD_SCAN_INTERVAL:-5}"
+              add_managed_setting "Scheduler" "rss_checkinterval" "${MYLAR_RSS_CHECK_INTERVAL:-20}"
+              add_managed_setting "Scheduler" "search_interval" "${MYLAR_SEARCH_INTERVAL:-360}"
+
+              if [ -n "${MYLAR_HTTP_USERNAME:-}" ]; then
+                add_managed_setting "Interface" "http_username" "${MYLAR_HTTP_USERNAME}"
+              fi
+              if [ -n "${MYLAR_HTTP_PASSWORD:-}" ]; then
+                add_managed_setting "Interface" "http_password" "${MYLAR_HTTP_PASSWORD}"
+              fi
+              if [ -n "${MYLAR_API_KEY:-}" ]; then
+                add_managed_setting "API" "api_key" "${MYLAR_API_KEY}"
+              fi
+
+              write_managed_template "${generated_path}"
+
+              if [ -s "${config_path}" ]; then
+                divergence_count=0
+                : > "${live_settings_snapshot_path}"
+                while IFS='|' read -r section_name option_name expected_value; do
+                  current_value="$(get_ini_value "${config_path}" "${section_name}" "${option_name}")"
+                  printf '%s|%s|%s\n' "${section_name}" "${option_name}" "${current_value}" >> "${live_settings_snapshot_path}"
+                  if [ "${current_value}" != "${expected_value}" ]; then
+                    divergence_count=$((divergence_count + 1))
+                    if [ "${log_diff}" = "true" ]; then
+                      echo "mylar bootstrap: key drift ${section_name}.${option_name}: expected='${expected_value}' actual='${current_value}'"
+                    fi
+                  fi
+                done < "${managed_settings_path}"
+
+                if [ "${divergence_count}" -eq 0 ]; then
+                  echo "mylar bootstrap: managed config is in sync (${config_path})"
+                  exit 0
+                fi
+
+                echo "mylar bootstrap: CONFIG_DIVERGENCE detected for managed keys (${divergence_count} mismatch(es))"
+                echo "mylar bootstrap: generated checksum $(cksum "${generated_path}" | awk '{print $1 ":" $2}')"
+                echo "mylar bootstrap: live-managed checksum $(cksum "${live_settings_snapshot_path}" | awk '{print $1 ":" $2}')"
+                if [ "${prowlarr_managed}" = "true" ]; then
+                  echo "mylar bootstrap: prowlarrManaged=true (indexer/client settings intentionally unmanaged by chart)"
+                fi
+
+                if [ "${force_rewrite}" = "true" ] || [ "${sync_on_divergence}" = "true" ]; then
+                  while IFS='|' read -r section_name option_name expected_value; do
+                    upsert_ini_value "${config_path}" "${section_name}" "${option_name}" "${expected_value}"
+                  done < "${managed_settings_path}"
+                  echo "mylar bootstrap: merged managed settings into existing config"
+                else
+                  echo "mylar bootstrap: live config preserved (set MYLAR_BOOTSTRAP_SYNC_ON_DIVERGENCE=true to merge managed keys)"
+                fi
+                exit 0
+              fi
+
+              cp "${generated_path}" "${config_path}"
+              echo "mylar bootstrap: created new config with managed defaults at ${config_path}"
+          env:
+            MYLAR_CONFIG_GENERATION_ENABLED: "false"
+            MYLAR_CONFIG_PATH: /config/config.ini
+            MYLAR_BOOTSTRAP_FORCE_REWRITE: "false"
+            MYLAR_BOOTSTRAP_SYNC_ON_DIVERGENCE: "false"
+            MYLAR_BOOTSTRAP_LOG_DIFF: "false"
+            MYLAR_PROWLARR_MANAGED: "false"
+            MYLAR_LIBRARY_PATH: /comics
+            MYLAR_DOWNLOADS_ROOT: /downloads
+            MYLAR_ENABLE_RSS: "True"
+            MYLAR_CREATE_FOLDERS: "True"
+            MYLAR_RENAME_FILES: "True"
+            MYLAR_LOWERCASE_FILENAMES: "True"
+            MYLAR_FAILED_DOWNLOAD_HANDLING: "True"
+            MYLAR_SCAN_ON_SERIES_CHANGES: "True"
+            MYLAR_ANNUALS_ON: "True"
+            MYLAR_IMPORT_METADATA: "True"
+            MYLAR_IMPORT_MOVE: "True"
+            MYLAR_IMPORT_RENAME: "True"
+            MYLAR_DOWNLOAD_SCAN_INTERVAL: "5"
+            MYLAR_RSS_CHECK_INTERVAL: "20"
+            MYLAR_SEARCH_INTERVAL: "360"
+          envFrom:
+            - secretRef:
+                name: mylar-config-bootstrap
+                optional: true
+
+  service:
+    main:
+      enabled: true
+      ports:
+        http:
+          enabled: true
+          port: 8090
+          protocol: HTTP
+
+  ingress:
+    main:
+      enabled: false
+      annotations: {}
+      hosts: []
+
+  persistence:
+    config:
+      enabled: true
+      type: persistentVolumeClaim
+      accessMode: ReadWriteOnce
+      size: 2Gi
+      globalMounts:
+        - path: /config
+    comics:
+      enabled: true
+      type: emptyDir
+      globalMounts:
+        - path: /comics
+    downloads:
+      enabled: true
+      type: emptyDir
+      globalMounts:
+        - path: /downloads
+
+externalSecrets:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreRef:
+    name: onepassword-connect
+    kind: ClusterSecretStore
+  target:
+    name: mylar-config-bootstrap
+    creationPolicy: Owner
+  refs:
+    httpUsername:
+      key: mylar
+      property: http_username
+    httpPassword:
+      key: mylar
+      property: http_password
+    apiKey:
+      key: mylar
+      property: api_key

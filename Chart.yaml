@@ -1,0 +1,21 @@
+apiVersion: v2
+name: mylar
+description: Mylar (comics and manga) via bjw-s app-template with optional config generation and ExternalSecrets.
+version: 1.0.0
+appVersion: "0.7.31"
+kubeVersion: ">=1.22.0-0"
+keywords:
+  - mylar
+  - comics
+  - manga
+  - app-template
+home: https://github.com/mylar3/mylar3
+sources:
+  - https://github.com/mylar3/mylar3
+  - https://github.com/linuxserver/docker-mylar3
+maintainers: []
+dependencies:
+  - name: app-template
+    alias: mylar
+    version: "4.6.2"
+    repository: https://bjw-s-labs.github.io/helm-charts
