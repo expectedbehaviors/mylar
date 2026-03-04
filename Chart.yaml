@@ -2,7 +2,7 @@ apiVersion: v2
 name: mylar
 description: Mylar (comics and manga) via bjw-s app-template with optional config generation and ExternalSecrets.
 version: 1.0.0
-appVersion: "0.7.31"
+appVersion: "1.0.0"
 kubeVersion: ">=1.22.0-0"
 keywords:
   - mylar
