@@ -384,6 +384,8 @@ configIni:
 
 managedConfig:
   general:
+    ignoreHaveTotal: "False"
+    sabdockernzb: "False"
     createFolders: "True"
     renameFiles: "True"
     lowercaseFilenames: "True"
@@ -394,10 +396,53 @@ managedConfig:
     comics: "/comics"
     downloads: "/downloads"
   import:
+    paths: "False"
     metadata: "True"
     move: "True"
     rename: "True"
+    addComics: "True"
+    seriesFolders: "True"
   scheduler:
     searchInterval: "360"
     rssCheckInterval: "20"
     downloadScanInterval: "5"
+    checkGithubInterval: "360"
+    blocklistTimer: "3600"
+  client:
+    nzbDownloader: "1"
+    torrentDownloader: "2"
+  interface:
+    httpsChain: "None"
+    authentication: "0"
+    httpPort: "8090"
+    loginTimeout: "43800"
+    httpRoot: "/"
+    httpsForceOn: "False"
+    httpsCert: "None"
+    httpHost: "0.0.0.0"
+    enableHttps: "False"
+    httpsKey: "None"
+    hostReturn: "None"
+    alphaindex: "True"
+    cherrypyLogging: "False"
+  cv:
+    verify: "True"
+    only: "True"
+    info: "True"
+    onetimer: "True"
+    apiRate: "2"
+    ignoredPublishers: ""
+    userAgent: "Mozilla/5.0"
+  api:
+    enabled: "True"
+  perms:
+    chmodFile: "0660"
+    chowner: "1001"
+    enforcePerms: "True"
+    chmodDir: "0777"
+    chgroup: "1001"
+  logs:
+    dir: "/config/mylar/logs"
+    maxSize: "10000000"
+    level: "1"
+    maxFiles: "5"
