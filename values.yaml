@@ -384,65 +384,65 @@ configIni:
 
 managedConfig:
   general:
-    ignoreHaveTotal: "False"
-    sabdockernzb: "False"
-    createFolders: "True"
-    renameFiles: "True"
-    lowercaseFilenames: "True"
-    failedDownloadHandling: "True"
-    enableRss: "True"
-    annualsOn: "True"
+    ignoreHaveTotal: false
+    sabdockernzb: false
+    createFolders: true
+    renameFiles: true
+    lowercaseFilenames: true
+    failedDownloadHandling: true
+    enableRss: true
+    annualsOn: true
   paths:
     comics: "/comics"
     downloads: "/downloads"
   import:
-    paths: "False"
-    metadata: "True"
-    move: "True"
-    rename: "True"
-    addComics: "True"
-    seriesFolders: "True"
+    paths: false
+    metadata: true
+    move: true
+    rename: true
+    addComics: true
+    seriesFolders: true
   scheduler:
-    searchInterval: "360"
-    rssCheckInterval: "20"
-    downloadScanInterval: "5"
-    checkGithubInterval: "360"
-    blocklistTimer: "3600"
+    searchInterval: 360
+    rssCheckInterval: 20
+    downloadScanInterval: 5
+    checkGithubInterval: 360
+    blocklistTimer: 3600
   client:
-    nzbDownloader: "1"
-    torrentDownloader: "2"
+    nzbDownloader: 1
+    torrentDownloader: 2
   interface:
     httpsChain: "None"
-    authentication: "0"
-    httpPort: "8090"
-    loginTimeout: "43800"
+    authentication: 0
+    httpPort: 8090
+    loginTimeout: 43800
     httpRoot: "/"
-    httpsForceOn: "False"
+    httpsForceOn: false
     httpsCert: "None"
     httpHost: "0.0.0.0"
-    enableHttps: "False"
+    enableHttps: false
     httpsKey: "None"
     hostReturn: "None"
-    alphaindex: "True"
-    cherrypyLogging: "False"
+    alphaindex: true
+    cherrypyLogging: false
   cv:
-    verify: "True"
-    only: "True"
-    info: "True"
-    onetimer: "True"
-    apiRate: "2"
+    verify: true
+    only: true
+    info: true
+    onetimer: true
+    apiRate: 2
     ignoredPublishers: ""
     userAgent: "Mozilla/5.0"
   api:
-    enabled: "True"
+    enabled: true
   perms:
     chmodFile: "0660"
     chowner: "1001"
-    enforcePerms: "True"
+    enforcePerms: true
     chmodDir: "0777"
     chgroup: "1001"
   logs:
     dir: "/config/mylar/logs"
-    maxSize: "10000000"
-    level: "1"
-    maxFiles: "5"
+    maxSize: 10000000
+    level: 1
+    maxFiles: 5
