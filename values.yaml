@@ -51,6 +51,7 @@ mylar:
               fi
 
               config_path="${MYLAR_CONFIG_PATH:-/config/config.ini}"
+              template_path="${MYLAR_CONFIG_TEMPLATE_PATH:-/mnt/mylar-config/config.ini}"
               force_rewrite="${MYLAR_BOOTSTRAP_FORCE_REWRITE:-false}"
               sync_on_divergence="${MYLAR_BOOTSTRAP_SYNC_ON_DIVERGENCE:-false}"
               log_diff="${MYLAR_BOOTSTRAP_LOG_DIFF:-false}"
@@ -58,6 +59,30 @@ mylar:
               generated_path="/tmp/config.generated.ini"
               managed_settings_path="/tmp/config.managed.settings"
               live_settings_snapshot_path="/tmp/config.live.managed.snapshot"
+
+              if [ -f "${template_path}" ]; then
+                echo "mylar bootstrap: using templated config from ${template_path}"
+                mkdir -p "$(dirname "${config_path}")"
+                if [ -s "${config_path}" ]; then
+                  if cmp -s "${template_path}" "${config_path}"; then
+                    echo "mylar bootstrap: config.ini is in sync with template"
+                    exit 0
+                  fi
+                  echo "mylar bootstrap: CONFIG_DIVERGENCE (template vs live)"
+                  echo "mylar bootstrap: template checksum $(cksum "${template_path}" | awk '{print $1 ":" $2}')"
+                  echo "mylar bootstrap: live checksum $(cksum "${config_path}" | awk '{print $1 ":" $2}')"
+                  if [ "${force_rewrite}" = "true" ] || [ "${sync_on_divergence}" = "true" ]; then
+                    cp "${template_path}" "${config_path}"
+                    echo "mylar bootstrap: overwrote live config.ini from template"
+                  else
+                    echo "mylar bootstrap: live config preserved (set MYLAR_BOOTSTRAP_SYNC_ON_DIVERGENCE=true to sync from template)"
+                  fi
+                  exit 0
+                fi
+                cp "${template_path}" "${config_path}"
+                echo "mylar bootstrap: created new config.ini from template at ${config_path}"
+                exit 0
+              fi
 
               add_managed_setting() {
                 section_name="$1"
@@ -245,6 +270,7 @@ mylar:
           env:
             MYLAR_CONFIG_GENERATION_ENABLED: "false"
             MYLAR_CONFIG_PATH: /config/config.ini
+            MYLAR_CONFIG_TEMPLATE_PATH: /mnt/mylar-config/config.ini
             MYLAR_BOOTSTRAP_FORCE_REWRITE: "false"
             MYLAR_BOOTSTRAP_SYNC_ON_DIVERGENCE: "false"
             MYLAR_BOOTSTRAP_LOG_DIFF: "false"
@@ -303,6 +329,17 @@ mylar:
       globalMounts:
         - path: /downloads
 
+    config-template:
+      enabled: true
+      type: secret
+      name: mylar-config-ini
+      globalMounts: []
+      advancedMounts:
+        main:
+          bootstrap-config:
+            - path: /mnt/mylar-config
+              readOnly: true
+
 externalSecrets:
   enabled: false
   refreshInterval: 1h
@@ -322,3 +359,90 @@ externalSecrets:
     apiKey:
       key: mylar
       property: api_key
+
+configIni:
+  enabled: false
+  secretName: mylar-config-ini
+  refreshInterval: 1h
+  secretStoreRef:
+    name: onepassword-connect
+    kind: ClusterSecretStore
+  secretRefs:
+    apiKey:
+      key: mylar
+      property: api_key
+    comicvineApi:
+      key: mylar
+      property: comicvine_api
+    # Optional HTTP auth; omit or leave unset to skip.
+    # httpUsername:
+    #   key: mylar
+    #   property: http_username
+    # httpPassword:
+    #   key: mylar
+    #   property: http_password
+
+managedConfig:
+  general:
+    ignoreHaveTotal: "False"
+    sabdockernzb: "False"
+    createFolders: "True"
+    renameFiles: "True"
+    lowercaseFilenames: "True"
+    failedDownloadHandling: "True"
+    enableRss: "True"
+    annualsOn: "True"
+  paths:
+    comics: "/comics"
+    downloads: "/downloads"
+  import:
+    paths: "False"
+    metadata: "True"
+    move: "True"
+    rename: "True"
+    addComics: "True"
+    seriesFolders: "True"
+  scheduler:
+    searchInterval: "360"
+    rssCheckInterval: "20"
+    downloadScanInterval: "5"
+    checkGithubInterval: "360"
+    blocklistTimer: "3600"
+  client:
+    nzbDownloader: "1"
+    torrentDownloader: "2"
+  interface:
+    httpsChain: "None"
+    authentication: "0"
+    httpPort: "8090"
+    loginTimeout: "43800"
+    httpRoot: "/"
+    httpsForceOn: "False"
+    httpsCert: "None"
+    httpHost: "0.0.0.0"
+    enableHttps: "False"
+    httpsKey: "None"
+    hostReturn: "None"
+    alphaindex: "True"
+    cherrypyLogging: "False"
+  cv:
+    verify: "True"
+    only: "True"
+    info: "True"
+    onetimer: "True"
+    apiRate: "2"
+    ignoredPublishers: ""
+    userAgent: "Mozilla/5.0"
+  api:
+    enabled: "True"
+  perms:
+    chmodFile: "0660"
+    chowner: "1001"
+    enforcePerms: "True"
+    chmodDir: "0777"
+    chgroup: "1001"
+  logs:
+    dir: "/config/mylar/logs"
+    maxSize: "10000000"
+    level: "1"
+    maxFiles: "5"
