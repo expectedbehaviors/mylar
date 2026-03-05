@@ -2,8 +2,33 @@ apiVersion: v1
 entries:
   mylar:
   - apiVersion: v2
+    appVersion: 1.0.1
+    created: "2026-03-05T04:59:03.682518267Z"
+    dependencies:
+    - alias: mylar
+      name: app-template
+      repository: https://bjw-s-labs.github.io/helm-charts
+      version: 4.6.2
+    description: Mylar (comics and manga) via bjw-s app-template with optional config
+      generation and ExternalSecrets.
+    digest: f2c4f1bb7cf9a8d888cfa12e2a0b4eb525623f586de114bc2883ab56ad7ae7b9
+    home: https://github.com/mylar3/mylar3
+    keywords:
+    - mylar
+    - comics
+    - manga
+    - app-template
+    kubeVersion: '>=1.22.0-0'
+    name: mylar
+    sources:
+    - https://github.com/mylar3/mylar3
+    - https://github.com/linuxserver/docker-mylar3
+    urls:
+    - https://expectedbehaviors.github.io/mylar/mylar-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-03-04T07:45:22.111688493Z"
+    created: "2026-03-05T04:59:03.674039049Z"
     dependencies:
     - alias: mylar
       name: app-template
@@ -26,4 +51,4 @@ entries:
     urls:
     - https://expectedbehaviors.github.io/mylar/mylar-1.0.0.tgz
     version: 1.0.0
-generated: "2026-03-04T07:45:22.104696943Z"
+generated: "2026-03-05T04:59:03.666938489Z"
