@@ -1,0 +1,53 @@
+name: Helm chart CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Chart.yaml'
+      - 'values.yaml'
+      - 'values/**'
+      - 'README.md'
+      - '.helmignore'
+      - 'templates/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Chart.yaml'
+      - 'values.yaml'
+      - 'values/**'
+      - 'README.md'
+      - '.helmignore'
+      - 'templates/**'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      baseline_version:
+        description: 'First release version when no tags exist (e.g. 1.0.0)'
+        required: false
+      release_tag:
+        description: 'Release tag override (e.g. mylar-v1.0.0)'
+        required: false
+
+concurrency: helm-chart-mylar
+
+jobs:
+  ci:
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: expectedbehaviors/github-actions/.github/workflows/helm-chart-ci.yml@main
+    secrets: inherit
+    with:
+      chart_path: .
+      tag_prefix: mylar-v
+      helm_repositories: |
+        bjw-s=https://bjw-s-labs.github.io/helm-charts
+      publish_enabled: true
+      release_notes_enabled: false
+      chart_name: mylar
+      helm_repo_name: bjw-s
+      helm_repo_url: https://bjw-s-labs.github.io/helm-charts
+      initial_version: ${{ github.event.inputs.baseline_version || '' }}
+      release_tag: ${{ github.event.inputs.release_tag || '' }}
