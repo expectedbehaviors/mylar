@@ -45,7 +45,7 @@ jobs:
       helm_repositories: |
         bjw-s=https://bjw-s-labs.github.io/helm-charts
       publish_enabled: true
-      release_notes_enabled: false
+      release_notes_enabled: true
       chart_name: mylar
       helm_repo_name: bjw-s
       helm_repo_url: https://bjw-s-labs.github.io/helm-charts
