@@ -315,6 +315,7 @@ mylar:
       enabled: true
       type: persistentVolumeClaim
       accessMode: ReadWriteOnce
+      storageClass: ""
       size: 2Gi
       globalMounts:
         - path: /config
