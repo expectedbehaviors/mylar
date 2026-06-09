@@ -340,6 +340,11 @@ mylar:
             - path: /mnt/mylar-config
               readOnly: true
 
+onepassworditem:
+  enabled: true
+  defaultVault: ""
+  items: []
+
 externalSecrets:
   enabled: false
   refreshInterval: 1h
