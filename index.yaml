@@ -2,8 +2,36 @@ apiVersion: v1
 entries:
   mylar:
   - apiVersion: v2
+    appVersion: 1.0.3
+    created: "2026-07-28T03:38:14.269988995Z"
+    dependencies:
+    - alias: mylar
+      name: app-template
+      repository: https://bjw-s-labs.github.io/helm-charts
+      version: 4.6.2
+    - name: onepassworditem
+      repository: https://expectedbehaviors.github.io/OnePasswordItem-helm
+      version: 1.1.1
+    description: Mylar (comics and manga) via bjw-s app-template with optional config
+      generation and ExternalSecrets.
+    digest: 8030ebf23db7222934faceff40b54f3a0519fd6bb93b6adda726a5e75513aec7
+    home: https://github.com/mylar3/mylar3
+    keywords:
+    - mylar
+    - comics
+    - manga
+    - app-template
+    kubeVersion: '>=1.22.0-0'
+    name: mylar
+    sources:
+    - https://github.com/mylar3/mylar3
+    - https://github.com/linuxserver/docker-mylar3
+    urls:
+    - https://expectedbehaviors.github.io/mylar/mylar-1.0.3.tgz
+    version: 1.0.3
+  - apiVersion: v2
     appVersion: 1.0.1
-    created: "2026-03-05T04:59:03.682518267Z"
+    created: "2026-07-28T03:38:14.259709957Z"
     dependencies:
     - alias: mylar
       name: app-template
@@ -28,7 +56,7 @@ entries:
     version: 1.0.1
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-03-05T04:59:03.674039049Z"
+    created: "2026-07-28T03:38:14.251828614Z"
     dependencies:
     - alias: mylar
       name: app-template
@@ -51,4 +79,4 @@ entries:
     urls:
     - https://expectedbehaviors.github.io/mylar/mylar-1.0.0.tgz
     version: 1.0.0
-generated: "2026-03-05T04:59:03.666938489Z"
+generated: "2026-07-28T03:38:14.244654946Z"
